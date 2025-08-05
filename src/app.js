@@ -38,9 +38,34 @@ app.use(
 );
 
 // CORS configuration
+const allowedOrigins = [
+   "https://echo-eight-ruddy.vercel.app",
+   "http://localhost:5173", // For development
+   "http://localhost:3000", // Alternative dev port
+];
+
+// Add environment-specific origin if available
+if (process.env.FRONTEND_URL) {
+   const frontendUrl = process.env.FRONTEND_URL.replace(/\/$/, ''); // Remove trailing slash
+   if (!allowedOrigins.includes(frontendUrl)) {
+      allowedOrigins.push(frontendUrl);
+   }
+}
+
 app.use(
    cors({
-      origin: process.env.FRONTEND_URL || "http://localhost:5173",
+      origin: function (origin, callback) {
+         // Allow requests with no origin (like mobile apps or curl requests)
+         if (!origin) return callback(null, true);
+         
+         if (allowedOrigins.includes(origin)) {
+            logger.info(`CORS allowed origin: ${origin}`);
+            return callback(null, true);
+         } else {
+            logger.error(`CORS blocked origin: ${origin}. Allowed origins: ${allowedOrigins.join(', ')}`);
+            return callback(new Error('Not allowed by CORS'));
+         }
+      },
       credentials: true,
       optionsSuccessStatus: 200,
    })
