@@ -13,6 +13,10 @@ import { apiLimiter } from "./middleware/rateLimit.js";
 import categoryRoutes from "./routes/categories.js";
 import itemRoutes from "./routes/items.js";
 
+// Import upload functionality
+import { upload } from "./config/cloudinary.js";
+import { uploadImage } from "./controllers/itemController.js";
+
 // ES module __dirname replacement
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -94,6 +98,9 @@ app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 // API routes
 app.use("/api/categories", categoryRoutes);
 app.use("/api/items", itemRoutes);
+
+// General upload endpoint
+app.post("/api/upload", upload.single("image"), uploadImage);
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {

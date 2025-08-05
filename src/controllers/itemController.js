@@ -17,6 +17,7 @@ export const uploadImage = async (req, res) => {
       return res.status(200).json({
          success: true,
          message: "Image uploaded successfully",
+         url: req.file.path, // Frontend expects this field
          data: {
             imageUrl: req.file.path,
             publicId: req.file.filename,

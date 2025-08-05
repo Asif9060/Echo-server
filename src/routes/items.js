@@ -28,7 +28,8 @@ router.get("/", validatePagination, validateSearch, handleValidationErrors, getI
 router.get("/stats", getItemStats);
 router.get("/:id", validateObjectId, handleValidationErrors, getItem);
 
-// Image upload route
+// Image upload routes (support both /upload and /upload-image for compatibility)
+router.post("/upload", upload.single("image"), uploadImage);
 router.post("/upload-image", upload.single("image"), uploadImage);
 
 // Admin routes (no authentication required)
