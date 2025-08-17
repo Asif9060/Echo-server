@@ -11,6 +11,7 @@ import {
 } from "../controllers/itemController";
 import {
    validateItem,
+   validateItemRelaxed,
    validatePagination,
    validateObjectId,
    validateSearch,
@@ -26,8 +27,14 @@ router.get("/stats", getItemStats);
 router.get("/:id", validateObjectId, handleValidationErrors, getItem);
 
 // Admin routes (no authentication required)
-router.post("/", createLimiter, validateItem, handleValidationErrors, createItem);
-router.put("/:id", validateObjectId, validateItem, handleValidationErrors, updateItem);
+router.post("/", createLimiter, validateItemRelaxed, handleValidationErrors, createItem);
+router.put(
+   "/:id",
+   validateObjectId,
+   validateItemRelaxed,
+   handleValidationErrors,
+   updateItem
+);
 router.patch("/:id/status", validateObjectId, handleValidationErrors, updateItemStatus);
 router.delete("/:id", validateObjectId, handleValidationErrors, deleteItem);
 router.delete("/", bulkDeleteItems);

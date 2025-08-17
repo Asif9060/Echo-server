@@ -103,6 +103,7 @@ export const getItems = async (req, res) => {
          screenshots: item.screenshots,
          soundtrackLinks: item.soundtrackLinks,
          ratings: item.ratings,
+         rating: item.rating,
          characters: item.characters,
          slug: item.slug,
          category: item.category,
@@ -165,6 +166,7 @@ export const getItem = async (req, res) => {
          screenshots: item.screenshots,
          soundtrackLinks: item.soundtrackLinks,
          ratings: item.ratings,
+         rating: item.rating,
          characters: item.characters,
          slug: item.slug,
          category: item.category,
@@ -204,6 +206,7 @@ export const createItem = async (req, res) => {
          screenshots,
          soundtrackLinks,
          ratings,
+         rating,
          characters,
          slug,
          category,
@@ -211,7 +214,7 @@ export const createItem = async (req, res) => {
       } = req.body;
 
       // Only validate category is provided (required for organization)
-      if (!category) {
+      if (!category || category.trim() === "") {
          return res.status(400).json({
             success: false,
             message: "Category is required.",
@@ -230,27 +233,35 @@ export const createItem = async (req, res) => {
          }
       }
 
-      // Auto-generate slug from title if not provided
+      // Auto-generate slug from title if not provided, or use a default
       let itemSlug = slug;
-      if (!itemSlug && title) {
-         itemSlug = title
-            .toLowerCase()
-            .trim()
-            .replace(/[^a-z0-9\s-]/g, "")
-            .replace(/\s+/g, "-")
-            .replace(/-+/g, "-")
-            .replace(/^-|-$/g, "");
-      }
       if (!itemSlug) {
-         return res
-            .status(400)
-            .json({ success: false, message: "Title is required to generate slug" });
+         if (title) {
+            itemSlug = title
+               .toLowerCase()
+               .trim()
+               .replace(/[^a-z0-9\s-]/g, "")
+               .replace(/\s+/g, "-")
+               .replace(/-+/g, "-")
+               .replace(/^-|-$/g, "");
+         } else {
+            // Generate default slug if no title provided
+            itemSlug = `untitled-item-${Date.now()}`;
+         }
       }
 
-      // Verify category exists
-      const categoryExists = await Category.findById(category);
-      if (!categoryExists) {
-         return res.status(400).json({ success: false, message: "Category not found" });
+      // Verify category exists with robust checks
+      try {
+         const categoryExists = await Category.findById(category);
+         if (!categoryExists) {
+            return res
+               .status(400)
+               .json({ success: false, message: "Category not found or invalid." });
+         }
+      } catch (err) {
+         return res
+            .status(400)
+            .json({ success: false, message: "Invalid category id format." });
       }
 
       // Make slug unique if it already exists
@@ -261,25 +272,47 @@ export const createItem = async (req, res) => {
          counter++;
       }
 
-      const item = new Item({
-         title,
-         description,
-         releaseDate,
-         developer,
-         platforms,
-         genres,
-         keyFeatures,
-         storySummary,
-         highlights,
-         authorReview,
-         screenshots,
-         soundtrackLinks,
-         ratings,
-         characters: characters || [],
-         slug: uniqueSlug,
-         category,
-         status: status || "draft",
-      });
+      // Create item object with only non-empty values
+      const itemData = {};
+
+      // Add fields only if they have meaningful values
+      if (title && title.trim()) itemData.title = title.trim();
+      if (description && description.trim()) itemData.description = description.trim();
+      if (releaseDate) itemData.releaseDate = releaseDate;
+      if (developer && developer.trim()) itemData.developer = developer.trim();
+      if (platforms && platforms.length > 0)
+         itemData.platforms = platforms.filter((p) => p && p.trim());
+      if (genres && genres.length > 0)
+         itemData.genres = genres.filter((g) => g && g.trim());
+      if (keyFeatures && keyFeatures.length > 0)
+         itemData.keyFeatures = keyFeatures.filter((k) => k && k.trim());
+      if (storySummary && storySummary.trim())
+         itemData.storySummary = storySummary.trim();
+      if (highlights && highlights.length > 0)
+         itemData.highlights = highlights.filter((h) => h && h.trim());
+      if (authorReview && authorReview.trim())
+         itemData.authorReview = authorReview.trim();
+      if (screenshots && screenshots.length > 0)
+         itemData.screenshots = screenshots.filter((s) => s && s.trim());
+      if (soundtrackLinks && soundtrackLinks.length > 0)
+         itemData.soundtrackLinks = soundtrackLinks.filter((s) => s && s.trim());
+      if (ratings && Object.keys(ratings).some((key) => ratings[key] > 0))
+         itemData.ratings = ratings;
+      // Overall rating if provided and within range 0-5
+      if (rating !== undefined && rating !== null) {
+         const num = Number(rating);
+         if (!Number.isNaN(num) && num >= 0 && num <= 5) {
+            itemData.rating = num;
+         }
+      }
+      if (characters && characters.length > 0) itemData.characters = characters;
+
+      // Required fields
+      itemData.slug = uniqueSlug;
+      itemData.category = category;
+      itemData.status = status || "draft";
+
+      const item = new Item(itemData);
 
       await item.save();
       await updateCategoryItemCount(category);
@@ -301,6 +334,7 @@ export const createItem = async (req, res) => {
          screenshots: item.screenshots,
          soundtrackLinks: item.soundtrackLinks,
          ratings: item.ratings,
+         rating: item.rating,
          characters: item.characters,
          slug: item.slug,
          category: item.category,
@@ -341,6 +375,7 @@ export const updateItem = async (req, res) => {
          screenshots,
          soundtrackLinks,
          ratings,
+         rating,
          characters,
          slug,
          category,
@@ -428,6 +463,17 @@ export const updateItem = async (req, res) => {
             updateData.ratings = ratings;
          }
       }
+      // Handle overall rating: allow set or clear
+      if (rating !== undefined) {
+         if (rating === null || rating === "") {
+            updateData.rating = undefined; // clear
+         } else {
+            const num = Number(rating);
+            if (!Number.isNaN(num) && num >= 0 && num <= 5) {
+               updateData.rating = num;
+            }
+         }
+      }
 
       const item = await Item.findByIdAndUpdate(id, updateData, {
          new: true,
@@ -464,6 +510,7 @@ export const updateItem = async (req, res) => {
          screenshots: item.screenshots,
          soundtrackLinks: item.soundtrackLinks,
          ratings: item.ratings,
+         rating: item.rating,
          characters: item.characters,
          slug: item.slug,
          category: item.category,

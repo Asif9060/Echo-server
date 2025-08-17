@@ -3,10 +3,13 @@ import { body, validationResult, param, query } from "express-validator";
 export const handleValidationErrors = (req, res, next) => {
    const errors = validationResult(req);
    if (!errors.isEmpty()) {
+      const fieldErrors = errors
+         .array()
+         .map((e) => ({ field: e.param, message: e.msg, value: e.value }));
       res.status(400).json({
          success: false,
          message: "Validation failed",
-         errors: errors.array(),
+         errors: fieldErrors,
       });
       return;
    }
@@ -97,6 +100,120 @@ export const validateItem = [
       .withMessage("Replayability rating must be between 1 and 5"),
 
    body("category").isMongoId().withMessage("Category must be a valid MongoDB ObjectId"),
+
+   body("status")
+      .optional()
+      .isIn(["active", "inactive", "draft"])
+      .withMessage("Status must be either active, inactive, or draft"),
+];
+
+// Relaxed Item validation rules: only category required; others optional if present
+export const validateItemRelaxed = [
+   body("category")
+      .exists({ checkFalsy: true })
+      .withMessage("Category is required")
+      .bail()
+      .isMongoId()
+      .withMessage("Category must be a valid MongoDB ObjectId"),
+
+   body("title")
+      .optional()
+      .trim()
+      .isLength({ max: 200 })
+      .withMessage("Title cannot exceed 200 characters"),
+   body("description")
+      .optional()
+      .trim()
+      .isLength({ max: 2000 })
+      .withMessage("Description cannot exceed 2000 characters"),
+   body("releaseDate")
+      .optional()
+      .isISO8601()
+      .withMessage("Release date must be a valid date"),
+   body("developer")
+      .optional()
+      .trim()
+      .isLength({ max: 100 })
+      .withMessage("Developer cannot exceed 100 characters"),
+
+   body("platforms").optional().isArray().withMessage("Platforms must be an array"),
+   body("platforms.*")
+      .optional()
+      .trim()
+      .isLength({ min: 1 })
+      .withMessage("Platform entries cannot be empty"),
+
+   body("genres").optional().isArray().withMessage("Genres must be an array"),
+   body("genres.*")
+      .optional()
+      .trim()
+      .isLength({ min: 1 })
+      .withMessage("Genre entries cannot be empty"),
+
+   body("keyFeatures").optional().isArray().withMessage("Key features must be an array"),
+   body("keyFeatures.*")
+      .optional()
+      .trim()
+      .isLength({ min: 1 })
+      .withMessage("Key feature entries cannot be empty"),
+
+   body("highlights").optional().isArray().withMessage("Highlights must be an array"),
+   body("highlights.*")
+      .optional()
+      .trim()
+      .isLength({ min: 1 })
+      .withMessage("Highlight entries cannot be empty"),
+
+   body("authorReview").optional().trim(),
+
+   body("screenshots").optional().isArray().withMessage("Screenshots must be an array"),
+   body("screenshots.*")
+      .optional()
+      .isString()
+      .withMessage("Screenshot URLs must be strings"),
+
+   body("soundtrackLinks")
+      .optional()
+      .isArray()
+      .withMessage("Soundtrack links must be an array"),
+   body("soundtrackLinks.*")
+      .optional()
+      .isURL({ protocols: ["http", "https"], require_protocol: true })
+      .withMessage("All soundtrack links must be valid URLs"),
+
+   body("ratings").optional().isObject().withMessage("Ratings must be an object"),
+   body("ratings.story")
+      .optional()
+      .isFloat({ min: 1, max: 5 })
+      .withMessage("Story rating must be between 1 and 5"),
+   body("ratings.graphics")
+      .optional()
+      .isFloat({ min: 1, max: 5 })
+      .withMessage("Graphics rating must be between 1 and 5"),
+   body("ratings.gameplay")
+      .optional()
+      .isFloat({ min: 1, max: 5 })
+      .withMessage("Gameplay rating must be between 1 and 5"),
+   body("ratings.replayability")
+      .optional()
+      .isFloat({ min: 1, max: 5 })
+      .withMessage("Replayability rating must be between 1 and 5"),
+
+   body("characters").optional().isArray().withMessage("Characters must be an array"),
+   body("characters.*.name")
+      .optional()
+      .trim()
+      .isLength({ max: 100 })
+      .withMessage("Character name cannot exceed 100 characters"),
+   body("characters.*.description")
+      .optional()
+      .trim()
+      .isLength({ max: 300 })
+      .withMessage("Character description must be 300 characters or less"),
+   body("characters.*.image")
+      .optional()
+      .isString()
+      .withMessage("Character image must be a string"),
 
    body("status")
       .optional()

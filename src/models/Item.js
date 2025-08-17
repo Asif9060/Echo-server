@@ -43,6 +43,14 @@ const ItemSchema = new Schema(
          default: undefined,
          required: false,
       },
+      // Overall Rating (optional, 0-5)
+      rating: {
+         type: Number,
+         min: 0,
+         max: 5,
+         required: false,
+         default: undefined,
+      },
       characters: {
          type: [
             {

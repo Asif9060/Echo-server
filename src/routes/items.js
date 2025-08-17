@@ -11,8 +11,7 @@ import {
    uploadImage,
 } from "../controllers/itemController.js";
 import {
-   validateItem,
-   validateItemUpdate,
+   validateItemRelaxed,
    validatePagination,
    validateObjectId,
    validateSearch,
@@ -33,11 +32,11 @@ router.post("/upload", upload.single("image"), uploadImage);
 router.post("/upload-image", upload.single("image"), uploadImage);
 
 // Admin routes (no authentication required)
-router.post("/", createLimiter, validateItem, handleValidationErrors, createItem);
+router.post("/", createLimiter, validateItemRelaxed, handleValidationErrors, createItem);
 router.put(
    "/:id",
    validateObjectId,
-   validateItemUpdate,
+   validateItemRelaxed,
    handleValidationErrors,
    updateItem
 );
